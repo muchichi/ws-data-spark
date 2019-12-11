@@ -36,8 +36,8 @@ class KCommon:
 			return '', ''
 	
 	def assign_poi(self):
-		self.data_sample.assign(distance=lambda x: self.set_poi(x['Latitude'], x['Longitude']))  #)lambda x: self.set_poi(x['Latitude'], x['Longitude'])[1])
-		self.data_sample.assign(poi=lambda x: self.set_poi('Latitude', 'Longitude')[0]) #x.Latitude, x.Longitude
+		self.data_sample.assign(distance=lambda x: self.set_poi(x['Latitude'], x['Longitude'])[1])
+		self.data_sample.assign(poi=lambda x: self.set_poi('Latitude', 'Longitude')[0])
 		self.data_sample.head(10)
 		return self.data_sample
 	

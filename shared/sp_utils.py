@@ -1,19 +1,18 @@
-from pyspark.sql import SparkSession, DataFrame
+from pyspark.sql import SparkSession, DataFrame, Column
 from pyspark import SparkContext, SparkConf
 from geopy.distance import geodesic
 import pandas as pd
-from pyspark.sql.functions import udf, array, struct
-from pyspark.sql.types import StringType, IntegerType
+from pyspark.sql.functions import udf, array, struct, split
+from pyspark.sql.types import StringType, IntegerType, FloatType, DoubleType
 
 
 class Common:
-	
 	poi = None
 	
 	@staticmethod
 	def spark_context() -> SparkSession:
 		conf = SparkConf().setAppName('eq_loc').setMaster('local')
-		sc = SparkContext.getOrCreate(conf=conf)  # SparkContext(conf=conf).getOrCreate()
+		sc = SparkContext.getOrCreate(conf=conf)
 		sq = SparkSession(sc)
 		return sq
 	
@@ -29,58 +28,59 @@ class Common:
 			print(Common.poi.head())
 		lat = cor['Latitude']
 		lng = cor['Longitude']
-		print(f'mussie processing {lat},{lng}')
+		print(f'processing ({lat},{lng})')
 		lst = []
 		initial = (lat, lng)
 		print(f'>>>> {initial} >>>>')
 		#
 		for i, row in Common.poi.iterrows():
-			print(i)
+			# print(i)
 			dis_val = {}
 			dest = (row[' Latitude'], row['Longitude'])
 			poiid = row['POIID']
 			distance = geodesic(initial, dest).miles
-			print(f' {dest} | {poiid} | {distance}')
+			# print(f' {dest} | {poiid} | {distance}')
 			dis_val['poi'] = poiid
 			dis_val['distance'] = distance
 			lst.append(dis_val)
-			print(lst)
-		print(f'////  {lst}////')
-		# df = pd.DataFrame.from_dict(dis_val, orient='index', columns=['poi', 'distance'])
+			# print(lst)
+		# print(f'------- {lst} ------')
 		df = pd.DataFrame(lst)
 		if df is not None:
-			dis_mile = df.sort_values('distance')['poi'].values[0]
-			return dis_mile
+			print(df.head())
+			req_poi = df.sort_values('distance')['poi'].values[0]
+			dis_mile = df.sort_values('distance')['distance'].values[0]
+			print(f'======> ({req_poi},{dis_mile})')
+			result = req_poi + ',' + str(dis_mile)
+			return result
 		else:
 			return ''
 	
-	# @staticmethod
-	# @udf(StringType())
-	# def get_poi_ii(lst):
-	# 	print(f'mussie processing({lst[0]},{lst[1]})')
-	# 	dis_val = {}
-	# 	initail = (lst[5], lst[6])
-	# 	poi = Common.get_df(path='data/POIList.csv').toPandas()
-	# 	for i, row in poi.iterrows():
-	# 		dest = (row[1], row[2])
-	# 		distance = geodesic(initail, dest).miles
-	# 		dis_val['poi'] = row[0]
-	# 		dis_val['distance'] = distance
-	# 	return pd.DataFrame(dis_val).sort_values('distance')['poi'].values[0]
-		
 	@staticmethod
 	def assign_poi(df: DataFrame):
 		distance = udf(Common.get_poi, StringType())
-		df = df.withColumn('poi', distance(struct('Latitude', 'Longitude')))
-		return df
+		df = df.withColumn('result', distance(struct('Latitude', 'Longitude')))
+		spl_c = split(df['result'], ',')
+		df = df.withColumn('Distance', spl_c.getItem(1).astype(DoubleType()))
+		df = df.withColumn('POI', spl_c.getItem(0))
+		dfs = df
+		dfn = dfs.groupBy('POI').avg('Distance')
+		return df, dfn
+	
+	@staticmethod
+	def poi_avg_std_distance(df: DataFrame):
+		dfn = df.filter(df['Distance'] > 100000).agg({"POI": "avg"})
+		dfn.show()
 	
 	@staticmethod
 	def sumk(x):
-		return x['A'] + x['B']
+		r = x['A'] + x['B']
+		# l = x['A'] * 2
+		return r
 	
 	@staticmethod
 	def test():
-		sum_cols = udf(Common.sumk, IntegerType())
+		sum_cols = udf(Common.sumk, StringType())
 		spark = Common.spark_context()
 		a = spark.createDataFrame([(101, 1, 16)], ['ID', 'A', 'B'])
 		a.show()
@@ -88,4 +88,3 @@ class Common:
 		print(m)
 		a = a.withColumn('Result', sum_cols(struct('A', 'B')))
 		a.show()
-

@@ -1,3 +1,11 @@
+## Note - Mussie
+First thing first:
+- I installed the docker env't and got everything as the instruction, but I didn't configure the docker cluster for my code and run on it, that is simply becuase I never used docker.
+- The solultion using koalas is not complete - the lamdba function is not working properly
+```self.data_sample.assign(distance=lambda x: self.set_poi(x['Latitude'], x['Longitude'])[1])
+		self.data_sample.assign(poi=lambda x: self.set_poi('Latitude', 'Longitude')[0])```
+- Run ```pip install -r requirements.txt``` to get all the packages I used
+
 ## Environment
 
 Unless you already have a working [Apache Spark](http://spark.apache.org/) cluster, you will need to have [Docker](https://docs.docker.com/) for simple environment setup.

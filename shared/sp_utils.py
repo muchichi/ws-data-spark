@@ -32,7 +32,6 @@ class Common:
 		lst = []
 		initial = (lat, lng)
 		print(f'>>>> {initial} >>>>')
-		#
 		for i, row in Common.poi.iterrows():
 			# print(i)
 			dis_val = {}
@@ -57,34 +56,13 @@ class Common:
 			return ''
 	
 	@staticmethod
-	def assign_poi(df: DataFrame):
+	def assign_poi() -> [DataFrame, DataFrame]:
+		df = Common.get_df('data/DataSample.csv').drop_duplicates([' TimeSt', 'Latitude', 'Longitude'])
 		distance = udf(Common.get_poi, StringType())
 		df = df.withColumn('result', distance(struct('Latitude', 'Longitude')))
 		spl_c = split(df['result'], ',')
 		df = df.withColumn('Distance', spl_c.getItem(1).astype(DoubleType()))
 		df = df.withColumn('POI', spl_c.getItem(0))
 		dfs = df
-		dfn = dfs.groupBy('POI').avg('Distance')
-		return df, dfn
-	
-	@staticmethod
-	def poi_avg_std_distance(df: DataFrame):
-		dfn = df.filter(df['Distance'] > 100000).agg({"POI": "avg"})
-		dfn.show()
-	
-	@staticmethod
-	def sumk(x):
-		r = x['A'] + x['B']
-		# l = x['A'] * 2
-		return r
-	
-	@staticmethod
-	def test():
-		sum_cols = udf(Common.sumk, StringType())
-		spark = Common.spark_context()
-		a = spark.createDataFrame([(101, 1, 16)], ['ID', 'A', 'B'])
-		a.show()
-		m = struct('A', 'B')
-		print(m)
-		a = a.withColumn('Result', sum_cols(struct('A', 'B')))
-		a.show()
+		df_poi_average_distance = dfs.groupBy('POI').avg('Distance')
+		return [df, df_poi_average_distance]
